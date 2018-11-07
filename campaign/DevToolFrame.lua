@@ -54,7 +54,6 @@ function DevToolFrame:createFrame()
     self:addTextBox();
 
     -- creating list box for scrolling
-    console.log("Creating list box");
     self.component:CreateComponent(self.frameName .. "_ListBox_UITEMP", "ui/campaign ui/finance_screen");
     local tempUI = UIComponent(self.component:Find(self.frameName .. "_ListBox_UITEMP"));
     local listView = find_uicomponent(tempUI, "tab_trade", "trade", "exports", "trade_partners_list", "listview");
@@ -64,12 +63,9 @@ function DevToolFrame:createFrame()
     self.component:Adopt(listView:Address());
     listView:PropagatePriority(self.component:Priority());
     remove_component(tempUI);
-    console.log("End of creating list box");
 
     local contentWidth, contentHeight = self.content:Bounds();
     local textboxWidth, textboxHeight = self.textbox:Bounds();
-    console.log("contentWidth: " .. contentWidth);
-    console.log("contentHeight: " .. contentHeight);
     self:resizeComponent(listView, contentWidth, contentHeight - (textboxHeight + 20));
     self:positionComponentRelativeTo(listView, self.textbox, 0, 35);
 end;
@@ -81,6 +77,16 @@ function DevToolFrame:removeFrame()
         console.log("Removing listener: " .. listener);
         core:remove_listener(listener);
     end
+end;
+
+function DevToolFrame:hideFrame()
+    console.log("Hiding component: " .. self.component:Id());
+    self.component:SetVisible(false);
+end;
+
+function DevToolFrame:showFrame()
+    console.log("Showing component: " .. self.component:Id());
+    self.component:SetVisible(true);
 end;
 
 function DevToolFrame:addTextBox()
@@ -181,19 +187,20 @@ end;
 function DevToolFrame:registerCloseButton(component)
     console.log("Setting up close button listener for: " .. component:Id());
 
+    local listenerName = "DevToolFrame_CloseButtonListener";
     core:add_listener(
-        "DevToolFrame_CloseButtonListener",
+        listenerName,
         "ComponentLClickUp",
         function(context)
             return component == UIComponent(context.component);
         end,
 
         function(context)
-            self:removeFrame();
-            core:remove_listener("DevToolFrame_CloseButtonListener");
+            self:hideFrame();
         end,
         true
     );
+    table.insert(self.listeners, listenerName);
 end;
 
 function DevToolFrame:addText(text)
