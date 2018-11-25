@@ -1,28 +1,43 @@
 require("console");
 require("remove_component");
+require("MiniDevToolFrame");
+require("ui/ComponentMixin");
 
 DevToolFrame = {
     frameName = "DevToolFrame",
     componentFile = "ui/campaign ui/technology_panel",
-    component = false,
-    content = false,
-    textbox = false,
-    listView = false,
+    component = nil,
+    content = nil,
+    textbox = nil,
+    listView = nil,
+    codeListView = nil,
+    codeListViewText = nil,
+    enterButton = nil,
+    executeButton = nil,
+    clearLogsButton = nil,
+    clearCodeButton = nil,
+    miniUI = nil,
+    miniUIButton = nil,
+    upButton = nil,
+    downButton = nil,
+    lines = {},
     listeners = {},
-    textPanes = {}
+    currentLineNumber = 1,
+    currentLineNumberComponent = nil,
+    textPanes = {},
+    secondPanelWidth = 600
 };
 
-function DevToolFrame:new()
-    console.log("DevToolFrame:new()");
-    
+function DevToolFrame:new()  
     local root = core:get_ui_root();
     local existing = find_uicomponent(root, self.frameName);
+
+    self.miniUI = MiniDevToolFrame:new(self);
+    self.miniUI:hideFrame();
 
     if not existing then
         self:createFrame();
         self:registerCloseButton(find_uicomponent(self.component, "panel_frame", "button_ok_lock", "button_ok"));
-    else
-        console.log(self.frameName .. " already existing, doing nothing");
     end;
 
     return self;
@@ -36,24 +51,210 @@ function DevToolFrame:createFrame()
     self.component = component;
    
     local title = find_uicomponent(self.component, "header_frame", "tx_technology");
-    title:SetStateText(self.frameName);
+    title:SetStateText("DevTool Console");
 
-    local research_rate = find_uicomponent(self.component, "label_research_rate");
-    if research_rate then
-        remove_component(research_rate);
-    end
-
-    local button_info = find_uicomponent(self.component, "panel_frame", "button_info_holder", "button_info");
-    if button_info then
-        remove_component(button_info);
-    end
-    
+    remove_component(find_uicomponent(self.component, "label_research_rate"));
+    remove_component(find_uicomponent(self.component, "panel_frame", "button_info_holder", "button_info"));
+    remove_component(find_uicomponent(self.component, "info_holder", "dy_treasury"));
+    remove_component(find_uicomponent(self.component, "info_holder", "infamy_holder"));
+        
     local parchment = UIComponent(self.component:Find("parchment"));
     self.content = parchment;
     
+    -- add the text box
     self:addTextBox();
 
+    -- add the mini switch button
+    self.miniUIButton = self:addMiniUIButton();
+
+    -- creating up / down arrow
+    self.upButton = self:createUpArrow();
+    self.downButton = self:createDownArrow();
+
+    -- create enter button
+    self.enterButton = self:createEnterButton();
+
+    -- create execute button
+    self.executeButton = self:createExecuteButton();
+    
+    -- create clear logs button
+    self.clearLogsButton = self:createClearLogsButton();
+
+    -- create clear code button
+    self.clearCodeButton = self:createClearCodeButton();
+
+    -- create line numerical display
+    self:createLineNumberDisplay();
+
     -- creating list box for scrolling
+    self:createListView();
+
+    -- creating list box for code viewin
+    self:createCodeListView();
+
+    -- update up / down arrows state
+    self:updateUpDownArrowState();
+end;
+
+function DevToolFrame:addMiniUIButton()
+    local buttonName = self.frameName .. "_MiniUIButton";
+    self.component:CreateComponent(buttonName, "ui/templates/round_small_button");
+
+    local button = find_uicomponent(self.component, buttonName);
+    button:SetImage("script/campaign/resize_icon.png");
+    button:SetTooltipText("Switch to minimized UI", true);
+
+    button:PropagatePriority(self.component:Priority());
+    self.component:Adopt(button:Address());
+
+    local componentWidth, componentHeight = self.component:Bounds();
+    self:positionComponentRelativeTo(button, self.component, componentWidth - 80, 30);
+
+    local listenerName = "devtool_button_Listener";
+    core:add_listener(
+        listenerName,
+        "ComponentLClickUp",
+        function(context) return button == UIComponent(context.component); end,    
+        function(context)
+            self.miniUI:showFrame();
+            self:hideFrame();
+        end,
+        true
+    );
+    table.insert(self.listeners, listenerName);
+
+    return button;
+end;
+
+function DevToolFrame:addTextBox()
+    local name = self.frameName .. "_TextBox";
+    local filepath = "ui/common ui/file_requester";
+    local content = self.component;
+
+    content:CreateComponent(name .. "_UITEMP", filepath);
+    local tempUI = UIComponent(content:Find(name .. "_UITEMP"));
+    local textbox = find_uicomponent(tempUI, "input_name");
+    self.textbox = textbox;
+    
+    textbox:PropagatePriority(content:Priority());
+    content:Adopt(textbox:Address());
+    remove_component(find_uicomponent(textbox, "input_name_label"));
+    remove_component(tempUI);
+
+    -- resize
+    local contentWidth, contentHeight = self.content:Bounds();
+    self:resizeComponent(textbox, contentWidth - self.secondPanelWidth);
+    self:positionComponentRelativeTo(textbox, self.content, 20, 20);
+end;
+
+function DevToolFrame:createUpArrow()
+    local name = self.frameName .. "_TextBox";
+    local content = self.component;
+    local textbox = self.textbox;
+
+    -- creating button
+    content:CreateComponent(name .. "_UpButton", "ui/templates/round_medium_button");
+    local upButton = UIComponent(content:Find(name .. "_UpButton"));
+
+    content:Adopt(upButton:Address());
+    upButton:PropagatePriority(content:Priority());
+    upButton:SetImage("ui/skins/default/parchment_sort_arrow_up.png");
+    self:resizeComponent(upButton, 17, 17);
+    self:positionComponentRelativeToWithOffset(upButton, textbox, 5, -30);
+
+    local listenerName = "DevToolFrame_TextBox_UpButtonListener";
+    core:add_listener(
+        listenerName,
+        "ComponentLClickUp",
+        function(context)
+            return upButton == UIComponent(context.component);
+        end,
+
+        function(context)
+            self:decrementLines();
+            self:updateUpDownArrowState();
+        end,
+        true
+    );
+    table.insert(self.listeners, listenerName);
+
+    return upButton;
+end;
+
+function DevToolFrame:decrementLines()
+    -- only allow decrement up to 0 index.
+    if self.currentLineNumber == 1 then
+        return;
+    end;
+
+    self:updateLines();
+    self.currentLineNumber = self.currentLineNumber - 1;
+    self:updateLineNumberDisplay();
+    self:updateTextBox();
+end;
+
+function DevToolFrame:createDownArrow()
+    local name = self.frameName .. "_TextBox";
+    local content = self.component;
+    local textbox = self.textbox;
+
+    -- creating button
+    content:CreateComponent(name .. "_DownButton", "ui/templates/round_medium_button");
+    local downButton = UIComponent(content:Find(name .. "_DownButton"));
+
+    content:Adopt(downButton:Address());
+    downButton:PropagatePriority(content:Priority());
+    downButton:SetImage("ui/skins/default/parchment_sort_arrow_down.png");
+    self:resizeComponent(downButton, 17, 17);
+    self:positionComponentRelativeToWithOffset(downButton, textbox, 5, -15);
+
+    local listenerName = "DevToolFrame_TextBox_DownButtonListener";
+    core:add_listener(
+        listenerName,
+        "ComponentLClickUp",
+        function(context)
+            return downButton == UIComponent(context.component);
+        end,
+
+        function(context)
+            self:incrementLines();
+            self:updateUpDownArrowState();
+        end,
+        true
+    );
+    table.insert(self.listeners, listenerName);
+
+    return downButton;
+end;
+
+function DevToolFrame:incrementLines()
+    self:updateLines();
+    self.currentLineNumber = self.currentLineNumber + 1;
+    self:updateLineNumberDisplay();
+    self:updateTextBox();
+end;
+
+function DevToolFrame:createLineNumberDisplay()
+    local componentName = self.frameName .. "_LineNumberComponent";
+    local content = self.component;
+    
+    content:CreateComponent(componentName .. "_UITEMP", "ui/campaign ui/mission_details");
+    local tempUI = UIComponent(content:Find(componentName .. "_UITEMP"));
+
+    local component = find_uicomponent(tempUI, "mission_details_child", "description_background", "description_view", "dy_description");
+    content:Adopt(component:Address());
+    component:PropagatePriority(content:Priority());
+    remove_component(tempUI);
+
+    local contentWidth, contentHeight = content:Bounds();
+    self:resizeComponent(component, contentWidth - self.secondPanelWidth, 30);
+    self:positionComponentRelativeTo(component, self.textbox, 0, 35);
+
+    self.currentLineNumberComponent = component;
+    self:updateLineNumberDisplay();
+end;
+
+function DevToolFrame:createListView()
     self.component:CreateComponent(self.frameName .. "_ListBox_UITEMP", "ui/campaign ui/finance_screen");
     local tempUI = UIComponent(self.component:Find(self.frameName .. "_ListBox_UITEMP"));
     local listView = find_uicomponent(tempUI, "tab_trade", "trade", "exports", "trade_partners_list", "listview");
@@ -66,146 +267,215 @@ function DevToolFrame:createFrame()
 
     local contentWidth, contentHeight = self.content:Bounds();
     local textboxWidth, textboxHeight = self.textbox:Bounds();
-    self:resizeComponent(listView, contentWidth, contentHeight - (textboxHeight + 20));
-    self:positionComponentRelativeTo(listView, self.textbox, 0, 35);
+    local lineNumberWidth, lineNumberHeight = self.currentLineNumberComponent:Bounds();
+    self:resizeComponent(listView, contentWidth - self.secondPanelWidth, contentHeight - (textboxHeight + lineNumberHeight + 40));
+    self:positionComponentRelativeTo(listView, self.textbox, 0, textboxHeight + lineNumberHeight + 10);
 end;
 
-function DevToolFrame:removeFrame()
-    console.log("Removing component: " .. self.component:Id());
-    remove_component(self.component);
-    for i, listener in ipairs(self.listeners) do
-        console.log("Removing listener: " .. listener);
-        core:remove_listener(listener);
+function DevToolFrame:createCodeListView()
+    local listViewWidth, listViewHeight = self.listView:Bounds();
+
+    -- list view title
+    local componentTitleName = self.frameName .. "ListBoxTextTitle_UITEMP";
+    self.component:CreateComponent(componentTitleName, "ui/campaign ui/mission_details");
+    local tempTitleTextUI = UIComponent(self.component:Find(componentTitleName));
+
+    local title = find_uicomponent(tempTitleTextUI, "mission_details_child", "description_background", "description_view", "dy_description");
+    self.component:Adopt(title:Address());
+    title:PropagatePriority(self.component:Priority());
+    remove_component(tempTitleTextUI);
+    title:SetStateText("Current Code:");
+
+    self:resizeComponent(title, self.secondPanelWidth, 30);
+    self:positionComponentRelativeTo(title, self.listView, listViewWidth, -self.currentLineNumberComponent:Height());
+
+    -- list view
+    self.component:CreateComponent(self.frameName .. "_ListBox_UITEMP", "ui/campaign ui/finance_screen");
+    local tempUI = UIComponent(self.component:Find(self.frameName .. "_ListBox_UITEMP"));
+    local codeListView = find_uicomponent(tempUI, "tab_trade", "trade", "exports", "trade_partners_list", "listview");
+    remove_component(find_uicomponent(codeListView, "headers"));
+    self.codeListView = codeListView;
+
+    self.component:Adopt(codeListView:Address());
+    codeListView:PropagatePriority(self.component:Priority());
+    remove_component(tempUI);
+
+    self:resizeComponent(codeListView, self.secondPanelWidth, listViewHeight);
+    self:positionComponentRelativeTo(codeListView, self.listView, listViewWidth, 0);
+
+    -- text code pane
+    local componentName = self.frameName .. "ListBoxText_UITEMP";
+    local listBoxContent = find_uicomponent(codeListView, "list_clip", "list_box");
+    listBoxContent:CreateComponent(componentName, "ui/campaign ui/mission_details");
+    local tempTextUI = UIComponent(listBoxContent:Find(componentName));
+
+    local component = find_uicomponent(tempTextUI, "mission_details_child", "description_background", "description_view", "dy_description");
+    self.codeListViewText = component;
+    listBoxContent:Adopt(component:Address());
+    component:PropagatePriority(listBoxContent:Priority());
+    remove_component(tempTextUI);
+end;
+
+function DevToolFrame:updateLines()
+    local textbox = self.textbox;
+    if self.miniUI.component:Visible() then
+        textbox = self.miniUI.textbox;
+    end;
+
+    local text = textbox:GetStateText();
+    self.lines[self.currentLineNumber] = text;
+
+    self:updateTextCode();
+end;
+
+function DevToolFrame:updateTextCode()
+    local lines = {};
+    for i, v in ipairs(self.lines) do
+        lines[i] = i .. ":    " .. self.lines[i];
+    end
+
+    local text = table.concat(lines, "\n");
+    self.codeListViewText:SetStateText("\n" .. text);
+end;
+
+function DevToolFrame:updateLineNumberDisplay()
+    local component = self.currentLineNumberComponent;
+    component:SetStateText("Current Line: " .. self.currentLineNumber);
+
+    self.miniUI:updateLineNumberDisplay();
+end;
+
+function DevToolFrame:updateTextBox()
+    local text = self.lines[self.currentLineNumber] or "";
+
+    remove_component(find_uicomponent(self.component, "input_name"));
+    self:addTextBox();
+
+    self.textbox:SimulateLClick();
+    for i in string.gmatch(text, ".") do
+        self.textbox:SimulateKey(i);
     end
 end;
 
-function DevToolFrame:hideFrame()
-    console.log("Hiding component: " .. self.component:Id());
-    self.component:SetVisible(false);
+function DevToolFrame:updateUpDownArrowState()
+    if self.currentLineNumber == 1 then
+        self.upButton:SetState("inactive");
+        if #self.lines == 0 then
+            self.downButton:SetState("inactive");
+        else
+            self.downButton:SetState("active");
+        end
+    elseif self.currentLineNumber >= #self.lines then
+        self.upButton:SetState("active");
+        self.downButton:SetState("inactive");
+    else
+        self.upButton:SetState("active");
+        self.downButton:SetState("active");
+    end
+
+    self.miniUI:updateUpDownArrowState();
 end;
 
-function DevToolFrame:showFrame()
-    console.log("Showing component: " .. self.component:Id());
-    self.component:SetVisible(true);
-end;
-
-function DevToolFrame:addTextBox()
-    local name = self.frameName .. "_TextBox";
-    local filepath = "ui/common ui/text_box";
-    local content = self.component;
-
-    console.log("Creating component in parent component " .. name .. " from filepath: " .. filepath);
-    content:CreateComponent(name, filepath);
-
-    local textbox = UIComponent(content:Find(name));
-    self.textbox = textbox;
-    content:Adopt(textbox:Address());
-    textbox:PropagatePriority(content:Priority());
-
-    -- resize
-    local contentWidth, contentHeight = self.content:Bounds();
-    self:resizeComponent(textbox, contentWidth - 200);
-    self:positionComponentRelativeTo(textbox, self.content, 20, 20);
+function DevToolFrame:createEnterButton()
+    local upButton = self.upButton;
+    local textbox = self.textbox;
 
     -- creating button
-    content:CreateComponent(name .. "_Button", "ui/templates/round_medium_button");
-    local textboxButton = UIComponent(content:Find(name .. "_Button"));
-    content:Adopt(textboxButton:Address());
-    textboxButton:PropagatePriority(content:Priority());
-    textboxButton:SetImage("ui/skins/default/icon_check.png");
-    self:positionComponentRelativeToWithOffset(textboxButton, textbox, 10, -35);
+    local button = self:createButton("Enter", "Save current line and go into next", 120, function(context)
+        self:incrementLines();
+        self:updateUpDownArrowState();
+        self.enterButton:SetState("down_off");
+    end);
 
-    local listenerName = "DevToolFrame_TextBoxButtonListener";
-    core:add_listener(
-        listenerName,
-        "ComponentLClickUp",
-        function(context)
-            return textboxButton == UIComponent(context.component);
-        end,
+    self:positionComponentRelativeToWithOffset(button, upButton, 10, -(textbox:Height() / 2 + 5));
 
-        function(context)
-            console.log("TextBoxButton clicked");
-            local text = textbox:GetStateText();
-            console.log("TextBox text: " .. text);
-
-            console.log("Compiling outputFunction from text");
-            self:addText(text);
-
-            local outputFunction, error = loadstring(text);
-            console.log("Compiled outputFunction from text");
-            if not outputFunction then
-                console.log("Got an error: " .. error);
-                return self:addText("[[col:red]] Got a compile error: " .. error .. "[[/col]]");
-            end
-
-            console.log("Calling outputFunction");
-            local ok, res = pcall(outputFunction);
-            if ok then
-                self:addText(">> " .. res);
-            else
-                console.log("Got a runtime error: " .. res);
-                self:addText("[[col:red]] Got a runtime error: " .. res .. "[[/col]]");
-            end
-        end,
-        true
-    );
-    table.insert(self.listeners, listenerName);
-
-    -- creating clear button
-    console.log("Creating clear button");
-    content:CreateComponent(name .. "_ClearButton", "ui/templates/square_medium_text_button_toggle");
-    local clearButton = find_uicomponent(content, name .. "_ClearButton");
-    local clearButtonText = find_uicomponent(clearButton, "dy_province");
-    content:Adopt(clearButton:Address());
-    clearButton:PropagatePriority(content:Priority());
-    clearButtonText:SetStateText("Clear");
-    clearButton:ResizeTextResizingComponentToInitialSize(120, clearButton:Height());
-    self:positionComponentRelativeToWithOffset(clearButton, textboxButton, 10, -50);
-    
-
-    local listenerNameClearButton = "DevToolFrame_ClearButtonListener";
-    core:add_listener(
-        listenerNameClearButton,
-        "ComponentLClickUp",
-        function(context)
-            return clearButton == UIComponent(context.component);
-        end,
-
-        function(context)
-            console.log("ClearButton clicked");
-            local toClear = find_uicomponent(self.listView, "list_clip", "list_box");
-            toClear:DestroyChildren();
-        end,
-        true
-    );
-    table.insert(self.listeners, listenerNameClearButton);
-
-    console.log("End of creating component " .. name);
-    return component;
+    return button;
 end;
 
-function DevToolFrame:registerCloseButton(component)
-    console.log("Setting up close button listener for: " .. component:Id());
+function DevToolFrame:createExecuteButton()
+    local textbox = self.textbox;
+    local enterButton = self.enterButton;
 
-    local listenerName = "DevToolFrame_CloseButtonListener";
-    core:add_listener(
-        listenerName,
-        "ComponentLClickUp",
-        function(context)
-            return component == UIComponent(context.component);
-        end,
+    -- creating button
+    local executeButton = self:createButton("Execute", "Execute Code", 120, function(context)
+        self:executeCode();
+        self.executeButton:SetState("down_off");
+    end);
 
-        function(context)
-            self:hideFrame();
-        end,
-        true
-    );
-    table.insert(self.listeners, listenerName);
+    self:positionComponentRelativeToWithOffset(executeButton, enterButton, 0, -enterButton:Height());
+
+    return executeButton;
 end;
 
-function DevToolFrame:addText(text)
+function DevToolFrame:executeCode()
+    self:updateLines();
+
+    local text = table.concat(self.lines, "\n");
+
+    local numberedLines = {};
+    for i, v in ipairs(self.lines) do
+        numberedLines[i] = i .. ":    " .. self.lines[i];
+    end
+    local outputText = table.concat(numberedLines, "\n");
+
+    self:addTextOutput(">>\n" .. outputText);
+
+    local outputFunction, error = loadstring(text);
+    if not outputFunction then
+        return self:addTextOutput("[[col:red]] Got a compile error: " .. error .. "[[/col]]");
+    end
+
+    local ok, res = pcall(outputFunction);
+    if ok then
+        self:addTextOutput("=> " .. tostring(res));
+    else
+        self:addTextOutput("[[col:red]] Got a runtime error: " .. res .. "[[/col]]");
+    end
+end;
+
+function DevToolFrame:createClearLogsButton()
+    local executeButton = self.executeButton;
+
+    -- creating button
+    local clearButton = self:createButton("Clear Logs", "Clear all output lines below the textbox", 150, function(context)
+        self:clearLogsOutput();
+        self.clearLogsButton:SetState("down_off");
+    end);
+
+    self:positionComponentRelativeToWithOffset(clearButton, executeButton, 0, -executeButton:Height());
+    return clearButton;
+end;
+
+function DevToolFrame:clearLogsOutput()
+    local toClear = find_uicomponent(self.listView, "list_clip", "list_box");
+    toClear:DestroyChildren();
+end;
+
+function DevToolFrame:createClearCodeButton()
+    local clearLogsButton = self.clearLogsButton;
+
+    -- creating button
+    local button = self:createButton("Clear Code", "Clear all previously entered code in the textbox", 150, function(context)
+        self:clearCodeLines();
+        self.clearCodeButton:SetState("down_off");
+    end);
+
+    self:positionComponentRelativeToWithOffset(button, clearLogsButton, 0, -clearLogsButton:Height());
+    return button;
+end;
+
+function DevToolFrame:clearCodeLines()
+    self.lines = {};
+    self.currentLineNumber = 1;
+    self:updateLineNumberDisplay();
+    self:updateTextBox();
+    self:updateUpDownArrowState();
+
+    self.codeListViewText:SetStateText("");
+end;
+
+function DevToolFrame:addTextOutput(text)
     local componentName = self.frameName .. "_Text" .. #self.textPanes;
-    console.log("Adding text: (" .. text .. ") into " .. componentName);
 
     local content = find_uicomponent(self.listView, "list_clip", "list_box");
     content:CreateComponent(componentName .. "_UITEMP", "ui/campaign ui/mission_details");
@@ -217,55 +487,58 @@ function DevToolFrame:addText(text)
     remove_component(tempUI);
 
     local contentWidth, contentHeight = content:Bounds();
-    self:resizeComponent(component, contentWidth, 30);
+    local textWidth, textHeight = component:TextDimensionsForText(text);
+    self:resizeComponent(component, textWidth, textHeight);
 
     local lastComponent = self.textPanes[#self.textPanes];
     if not lastComponent then
-        self:positionComponentRelativeTo(component, self.textbox, 0, 30);
+        self:positionComponentRelativeTo(component, self.listView, 0, 0);
     else 
-        self:positionComponentRelativeTo(component, lastComponent, 0, 30);
+        local lastWidth, lastHeight = lastComponent:Bounds();
+        self:positionComponentRelativeTo(component, lastComponent, 0, lastHeight);
     end    
 
     component:SetStateText(text);
     table.insert(self.textPanes, component);
 
-    console.log("End of addText for: " .. text);
     return component;
 end;
 
-function DevToolFrame:positionComponentRelativeTo(component, relativeComponent, xDiff, yDiff)
-    console.log("Positioning relative to " .. component:Id());
+function DevToolFrame:registerCloseButton(component)
+    local listenerName = "DevToolFrame_CloseButtonListener";
+    core:add_listener(
+        listenerName,
+        "ComponentLClickUp",
+        function(context)
+            return component == UIComponent(context.component);
+        end,
 
-    xDiff = xDiff or 0;
-    yDiff = yDiff or 0;
-
-    local xPosition, yPosition = relativeComponent:Position();
-    console.log("xPosition: " .. xPosition .. " yPosition: " .. yPosition);
-    
-    component:MoveTo(xPosition + xDiff, yPosition + yDiff);
+        function(context)
+            self:hideFrame();
+            self.miniUI:hideFrame();
+        end,
+        true
+    );
+    table.insert(self.listeners, listenerName);
 end;
 
-function DevToolFrame:positionComponentRelativeToWithOffset(component, relativeComponent, xDiff, yDiff)
-    console.log("Positioning relative to with offset " .. component:Id());
-    local xPosition, yPosition = relativeComponent:Position();
-    local width, height = relativeComponent:Bounds();
-    console.log("xPosition: " .. xPosition .. " yPosition: " .. yPosition);
-    console.log("width: " .. width .. " height: " .. height);
+function DevToolFrame:removeFrame()
+    remove_component(self.component);
+    for i, listener in ipairs(self.listeners) do
+        core:remove_listener(listener);
+    end
 
-    xDiff = xDiff or 0;
-    yDiff = yDiff or 0;
-    
-    component:MoveTo(xPosition + width + xDiff, yPosition + height + yDiff);
+    self.listeners = {};
 end;
 
-function DevToolFrame:resizeComponent(component, width, height)
-    local componentWidth, componentHeight = component:Bounds();
-    height = height or componentHeight;
-    width = width or componentWidth;
-
-    component:SetCanResizeHeight(true);
-    component:SetCanResizeWidth(true);
-    component:Resize(width, height);
-    component:SetCanResizeHeight(false);
-    component:SetCanResizeWidth(false);
+function DevToolFrame:hideFrame()
+    self.component:SetVisible(false);
 end;
+
+function DevToolFrame:showFrame()
+    self.miniUI:hideFrame();
+    self.component:SetVisible(true);
+    self:updateTextBox();
+end;
+
+includeMixins(DevToolFrame, ComponentMixin);
