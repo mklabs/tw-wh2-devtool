@@ -2,8 +2,6 @@ require("DevToolFrame");
 require("MiniDevToolFrame");
 
 local devFrame = nil;
-local miniDevFrame = nil;
-
 function devtool_createOrOpenFrame()
     if not devFrame then
         devFrame = DevToolFrame:new();
@@ -40,6 +38,7 @@ function devtool_createMenuBarButton()
 end;
 
 --[[
+local miniDevFrame = nil;
 core:add_listener(
     "test_ui_createFrame_F12",
     "ShortcutTriggered",

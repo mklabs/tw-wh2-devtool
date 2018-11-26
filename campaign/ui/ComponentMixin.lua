@@ -30,12 +30,12 @@ ComponentMixin = {
     end;
 
     -- Button helper creation
-    createButton = function (self, text, tooltipText, width, callback)
+    createButton = function (self, text, tooltipText, width, callback, content)
         width = width or 120;
         tooltipText = tooltipText or "";
+        content = content or self.component;
 
         local name = self.frameName .. "_Button_" .. text;
-        local content = self.component;
 
         content:CreateComponent(name, "ui/templates/square_medium_text_button_toggle");
 

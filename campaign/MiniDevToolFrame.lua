@@ -342,6 +342,7 @@ end;
 function MiniDevToolFrame:showFrame()
     self.component:SetVisible(true);
     self:updateTextBox();
+    self:updateUpDownArrowState();
 end;
 
 includeMixins(MiniDevToolFrame, ComponentMixin);
