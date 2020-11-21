@@ -6,7 +6,7 @@ local resizeComponent = require("devtool/utils/ui/resizeComponent")
 local positionComponentRelativeTo = require("devtool/utils/ui/positionComponentRelativeTo")
 
 local OptionsFrame = {
-    frameName = "devtool_wh2_options_window"
+    frameName = "devtool_options_window"
 }
 
 function OptionsFrame:new()

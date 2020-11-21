@@ -20,7 +20,7 @@ local includeMixins = mixins.includeMixins
 local ComponentMixin = mixins.ComponentMixin
 
 local DevToolFrame = {
-    frameName = "devtool_wh2_frame",
+    frameName = "devtool_frame",
     componentFile = "ui/campaign ui/objectives_screen",
     component = nil,
     content = nil,
@@ -47,22 +47,19 @@ function DevToolFrame:new()
     self:createComponents()
     self:registerCloseButton()
 
-    debug("so?")
     self.consoleComponent = ConsoleComponent:new(self)
-
-    debug("so?")
     self.miniUI = MiniDevToolFrame:new(self)
-    self.miniUI:hideFrame()
-
-    debug("so?")
     self.helpTabComponent = HelpTabComponent:new(self)
+
     self.helpTabComponent:hideFrame()
+    self.miniUI:hideFrame()
 
     self:welcomeMessage()
     self:registerListeners()
     
     self.textTabButton:SetState("selected")
 
+    core:trigger_event("devtool_open")
     return self
 end
 
@@ -75,7 +72,7 @@ function DevToolFrame:registerListeners()
         devtoolErrorFileChanged_runtime = "devtool_errorfile_changed_runtime_listener"
     }
 
-    debug("Register listeners")
+    debug("Register listeners", listeners)
     core:remove_listener(listeners.devtoolLogline)
     core:add_listener(
         listeners.devtoolLogline,
@@ -161,8 +158,6 @@ function DevToolFrame:registerListeners()
         end,
         true
     )
-
-    debug("Registered listeners", listeners)
 end
 
 function DevToolFrame:createFrame()
@@ -188,6 +183,9 @@ function DevToolFrame:createFrame()
         setupTroyPanels(component)
 
         self.content = _(component, "panel > TabGroup > tab_victory_conditions > inner_frame_old")
+
+        local x, y = self.component:Position()
+        self.component:MoveTo(x, y + 20)
     else
         removeComponent(find_uicomponent(self.component, "label_research_rate"))
         removeComponent(find_uicomponent(self.component, "panel_frame", "button_info_holder", "button_info"))
@@ -217,8 +215,6 @@ function DevToolFrame:addMiniUIButton()
 
     if self.isTroy then
         local component = self.component
-
-        debug("DevToolFrame:createFrame Setup miniUI btn")
         local originalInfoBtn = _(component, "panel > panel_title > button_info")
         originalInfoBtn:SetVisible(false)
     
@@ -234,7 +230,6 @@ function DevToolFrame:addMiniUIButton()
             "ComponentLClickUp",
             function(context) return btn == UIComponent(context.component) end,    
             function(context)
-               debug("Clicked mini ui btn")
                self.miniUI:showFrame()
                self:hideFrame()
             end,
@@ -369,8 +364,6 @@ end
 function DevToolFrame:addHelpTabButton()
     if self.isTroy then
         local component = self.component
-
-        debug("DevToolFrame:createTabOptionsButton")
         local originalTabBtn = _(component, "tree_holder > victory_type_tree > slot_parent > troy_main_victory_type_personal")
         local btn = UIComponent(originalTabBtn:CopyComponent("DevToolFrame_tabOptionsBtn_btn"))
         btn:SetVisible(true)
@@ -545,10 +538,13 @@ function DevToolFrame:registerCloseButton()
 end
 
 function DevToolFrame:hideFrame()
+    core:trigger_event("devtool_close")
     self.component:SetVisible(false)
 end
 
 function DevToolFrame:showFrame()
+    core:trigger_event("devtool_open")
+
     self.miniUI:hideFrame()
     self.component:SetVisible(true)
     self.consoleComponent:updateTextBox()

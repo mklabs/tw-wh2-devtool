@@ -1,4 +1,4 @@
-local debug = require("tw-debug")("devtool:utils:createConfirmBox")
+local debug = require("tw-debug")("devtool:utils:positionComponentRelativeTo")
 
 local function positionComponentRelativeTo(component, relativeComponent, xDiff, yDiff)
     xDiff = xDiff or 0

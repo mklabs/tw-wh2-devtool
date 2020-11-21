@@ -7,7 +7,7 @@ local helpMessage = require("devtool/utils/messages/help")
 local _ = require("devtool/utils/ui/_")
 
 local HelpTabComponent = {
-    frameName = "devtool_wh2_help_tab_component",
+    frameName = "devtool_help_tab_component",
     devtool = nil,
     component = nil,
     content = nil
@@ -59,10 +59,10 @@ function HelpTabComponent:createFrame()
     removeComponent(find_uicomponent(traitList, "vslider"))
 
     if self.isTroy then
-        local title = UIComponent(_("devtool_wh2_help_tab_component > trait_panel > parchment_divider_title > heading_traits"):CopyComponent("help_title"))
-        local traitPanel = _("devtool_wh2_help_tab_component > trait_panel")
+        local title = UIComponent(_("devtool_help_tab_component > trait_panel > parchment_divider_title > heading_traits"):CopyComponent("help_title"))
+        local traitPanel = _("devtool_help_tab_component > trait_panel")
         traitPanel:Adopt(title:Address())
-        removeComponent(_("devtool_wh2_help_tab_component > trait_panel > parchment_divider_title"))
+        removeComponent(_("devtool_help_tab_component > trait_panel > parchment_divider_title"))
 
         local x, y = title:Position()
         title:MoveTo(x, y - 35)

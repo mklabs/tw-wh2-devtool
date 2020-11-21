@@ -10,7 +10,7 @@ local includeMixins = mixins.includeMixins
 local ComponentMixin = mixins.ComponentMixin
 
 local MiniDevToolFrame = {
-    frameName = "devtool_wh2_mini_frame",
+    frameName = "devtool_mini_frame",
     component = nil,
     componentWidth = 800,
     componentHeight = 100,

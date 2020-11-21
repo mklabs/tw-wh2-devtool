@@ -13,7 +13,7 @@ local includeMixins = mixins.includeMixins
 local ComponentMixin = mixins.ComponentMixin
 
 local ConsoleComponent = {
-    frameName = "devtool_wh2_text_tab_component",
+    frameName = "devtool_text_tab_component",
     devtool = nil,
     component = nil,
     textbox = nil,

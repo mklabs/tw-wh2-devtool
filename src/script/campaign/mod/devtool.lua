@@ -1,6 +1,10 @@
 local debug = require("tw-debug")("devtool:mod")
 
 local devtool = require("devtool/devtool")
+local insertComponentAt = require("devtool/utils/ui/insertComponentAt")
+local removeComponent = require("devtool/utils/ui/removeComponent")
+local _ = require("devtool/utils/ui/_")
+
 local DevToolFrame = require("devtool/ui/DevToolFrame")
 
 local frame = nil
@@ -17,24 +21,55 @@ local function createOrOpenFrame()
 end
 
 local function createMenuBarButton()
-    local name = "devtool_wh2_button"
-    debug("Create menu bar button")
-    local buttonGroup = find_uicomponent(core:get_ui_root(), "menu_bar", "buttongroup")
-    buttonGroup:CreateComponent(name, "script/ui/devtool/templates/round_small_button")
+    debug("Create menu button")
 
-    local button = find_uicomponent(buttonGroup, name)
+    local name = "devtool_button"
+    local parent = find_uicomponent(core:get_ui_root(), "menu_bar", "buttongroup")
+    local holder = UIComponent(_("menu_bar > buttongroup > holder_help_overlay"):CopyComponent(name .. "_holder"))
+    local button = UIComponent(_(holder, "button_help_overlay"):CopyComponent(name))
     button:SetImagePath("ui/skins/default/icon_toggle_unit_details.png")
-    button:SetTooltipText("Devtool wh2 Console", true)
+    button:SetTooltipText("Devtool Console", true)
+    removeComponent(_(holder, "button_help_overlay"))
 
-    button:PropagatePriority(200)
-    buttonGroup:Adopt(button:Address())
+    parent:Divorce(holder:Address())
+    insertComponentAt(holder, parent, 7)
 
-    local listenerName = "devtool_button_Listener"
+    local listeners = {
+        ComponentLClickUp = "devtool_button_click_listener",
+        devtoolClose = "devtool_close_listener",
+        devtoolOpen = "devtool_open_listener"
+    }
+
+    core:remove_listener(listeners.ComponentLClickUp)
     core:add_listener(
-        listenerName,
+        listeners.ComponentLClickUp,
         "ComponentLClickUp",
         function(context) return button == UIComponent(context.component) end,    
         createOrOpenFrame,
+        true
+    )
+
+    local listenerName = "devtool_button_close_listener"
+    core:add_listener(
+        listeners.devtoolClose,
+        "devtool_close",
+        true,    
+        function()
+            debug("devtool close")
+            button:SetState("active")
+        end,
+        true
+    )
+
+    local listenerName = "devtool_button_open_listener"
+    core:add_listener(
+        listeners.devtoolOpen,
+        "devtool_open",
+        true,    
+        function()
+            debug("devtool open")
+            button:SetState("selected")
+        end,
         true
     )
 
