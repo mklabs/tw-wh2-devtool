@@ -19,7 +19,7 @@ local function welcomeMessage()
         <col:help_page_link>Automatically execute console_input.lua file</col>
         
         You can now use the file <col:dark_g>console_input.lua</col> in the game's <col:dark_g>data/text</col> folder to automatically input commands into the console.
-        This file is "watched" so that the content of the file will be executed on each save as if you were using the console textbox.
+        This file is "watched" so that the content of the file is executed on each save as if you were using the console textbox.
 
         You can click the link below the command prompt to open the file in your text editor.
 
@@ -29,7 +29,7 @@ local function welcomeMessage()
 
         <col:help_page_link>Options</col>
 
-        The Options button in the top right lets enable / disable file watching for <col:dark_g>data/text/console_input.lua</col>
+        The Options button in the top right lets you enable / disable file watching for the <col:dark_g>data/text/console_input.lua</col> file.
 
         <col:help_page_link>Help</col>
 
