@@ -8,9 +8,9 @@ local slice = require("devtool/utils/slice")
 
 local inspectOptions = { depth = 2, indent = "\t", newline = "\n-" }
 
-local INPUT_FILEPATH = "data/script/console/input.lua"
-local ERROR_FILEPATH = "data/script/console/error.txt"
-local OUTPUT_FILEPATH = "data/script/console/output.txt"
+local INPUT_FILEPATH = "data/text/console_input.lua"
+local ERROR_FILEPATH = "data/text/console_error.txt"
+local OUTPUT_FILEPATH = "data/text/console_output.txt"
 local CALLBACK_TIMER = 0.5
 local EXEC_COMPILE_ERROR = "EXEC_COMPILE_ERROR"
 local EXEC_RUNTIME_ERROR = "EXEC_RUNTIME_ERROR"
@@ -124,6 +124,18 @@ local function getContent(filename)
     file:close()
 
     return result
+end
+
+local function initInputFile()
+    debug("Init input file")
+
+    local file = io.open(INPUT_FILEPATH, 'r')
+    if not file then
+        -- create the input file on startup if not present with empty content
+        file = io.open(INPUT_FILEPATH, 'w')
+    end
+
+    file:close()
 end
 
 local function writeError(text, status)
@@ -281,6 +293,7 @@ end
 
 local function init()
     debug("Init devtool")
+    initInputFile()
     initWatchFile()
 
     core:remove_listener("console_store_uicomponent_on_click")

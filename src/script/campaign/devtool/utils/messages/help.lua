@@ -17,14 +17,14 @@ local function welcomeMessage()
 
         <<col:help_page_link>>Files<</col>>
 
-        You can now use the file <<col:dark_g>>console/input.lua<</col>> in the game's <<col:dark_g>>data/script<</col>> folder to automatically execute scripts
+        You can now use the file <<col:dark_g>>console_input.lua<</col>> in the game's <<col:dark_g>>data/text<</col>> folder to automatically execute scripts
         when the file is saved as if you were using the command prompt.
 
         It is useful to workaround the limitation of the in-game UI textbox which has size limitation and issues with some special characters (like "[").
 
-        Each command result is written to the <<col:dark_g>>console/output.txt<</col>> file, if you ever need to access it.
+        Each command result is written to the <<col:dark_g>>data/text/console_output.txt<</col>> file, if you ever need to access it.
 
-        Errors are written to the <<col:dark_g>>console/error.txt<</col>> file.
+        Errors are written to the <<col:dark_g>>data/text/console_error.txt<</col>> file.
     ]]
 
     return text:gsub("<<", "[["):gsub(">>", "]]"):gsub("|t", "\t")

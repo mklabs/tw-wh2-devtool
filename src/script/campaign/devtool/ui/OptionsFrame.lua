@@ -80,7 +80,7 @@ function OptionsFrame:createForm()
         positionComponentRelativeTo(label, self.component, 16, 80)
     end
 
-    label:SetTooltipText("Enable or disable console/input.lua file watching.\n\nThis file is used to input LUA script in the console that gets executed when the file is saved.\n\nYou can disable it if you don't use this feature to gain some performance.", true)
+    label:SetTooltipText("Enable or disable data/text/console_input.lua file watching.\n\nThis file is used to input LUA script in the console that gets executed when the file is saved.\n\nYou can disable it if you don't use this feature to gain some performance.", true)
 
     local checkbox = self:createCheckbox(self.frameName .. "_file_watching_checkbox", label)
     local savedValue = cm:get_saved_value("devtool_options_fileWatch")

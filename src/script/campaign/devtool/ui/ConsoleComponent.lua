@@ -203,7 +203,7 @@ function ConsoleComponent:createInputFileHint()
     removeComponent(tempUI)
 
     local contentWidth, contentHeight = content:Bounds()
-    local text = "You can also use the console/input.lua file in the script folder "
+    local text = "You can also use the data/text/console_input.lua file"
     local textWidth, textHeight = component:TextDimensionsForText(text)
 
     resizeComponent(component, textWidth, textHeight)
