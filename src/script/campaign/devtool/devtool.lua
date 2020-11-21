@@ -168,8 +168,13 @@ local function shouldPrependWithReturn(text)
         return false
     end
 
+    -- checks begins with local
+    if string.match(text, '^local*') then
+        return false
+    end
+
     -- checks if has any keyword
-    local keywords = { "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"}
+    local keywords = { "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "repeat", "return", "then", "true", "until", "while"}
 
     local hasKeyword = false
     local count = getLength(keywords)
