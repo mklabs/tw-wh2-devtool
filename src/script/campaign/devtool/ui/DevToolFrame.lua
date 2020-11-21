@@ -21,7 +21,8 @@ local ComponentMixin = mixins.ComponentMixin
 
 local DevToolFrame = {
     frameName = "devtool_frame",
-    componentFile = "ui/campaign ui/objectives_screen",
+    troyTemplate = "ui/campaign ui/objectives_screen",
+    warhammerTemplate = "script/ui/devtool/campaign ui/technology_panel",
     component = nil,
     content = nil,
     miniUI = nil,
@@ -162,7 +163,8 @@ end
 
 function DevToolFrame:createFrame()
     local root = core:get_ui_root()
-    root:CreateComponent(self.frameName, self.componentFile)
+    local template = self.isTroy and self.troyTemplate or self.warhammerTemplate
+    root:CreateComponent(self.frameName, template)
 
     local component = UIComponent(root:Find(self.frameName))
     component:PropagatePriority(10)
@@ -347,7 +349,7 @@ function DevToolFrame:addConsoleTabButton()
         return btn
     else
         -- creating button
-        local btn = self:createButton("Console", "Switch to Console", 120, function(context)
+        local button = self:createButton("Console", "Switch to Console", 120, function(context)
             self.consoleComponent:showFrame()
             self.helpTabComponent:hideFrame()
             self.helpTabButton:SetState("down_off")
@@ -355,7 +357,7 @@ function DevToolFrame:addConsoleTabButton()
         end)
 
         local componentWidth, componentHeight = self.component:Bounds()
-        positionComponentRelativeTo(btn, self.component, 40, 33)
+        positionComponentRelativeTo(button, self.component, 40, 33)
 
         return button
     end

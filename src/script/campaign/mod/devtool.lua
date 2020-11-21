@@ -20,8 +20,8 @@ local function createOrOpenFrame()
     end
 end
 
-local function createMenuBarButton()
-    debug("Create menu button")
+local function createTroyMenuBarButton()
+    debug("Create Troy menu button")
 
     local name = "devtool_button"
     local parent = find_uicomponent(core:get_ui_root(), "menu_bar", "buttongroup")
@@ -33,6 +33,31 @@ local function createMenuBarButton()
 
     parent:Divorce(holder:Address())
     insertComponentAt(holder, parent, 7)
+
+    return button
+end
+
+local function createWarhammerMenuBarButton()
+    debug("Create Warhammer menu button")
+
+    local name = "devtool_button"
+    local buttonGroup = find_uicomponent(core:get_ui_root(), "menu_bar", "buttongroup")
+    buttonGroup:CreateComponent(name, "script/ui/devtool/templates/round_small_button")
+
+    local button = find_uicomponent(buttonGroup, name)
+    button:SetImagePath("ui/skins/default/icon_toggle_unit_details.png")
+    button:SetTooltipText("Devtool Console", true)
+
+    button:PropagatePriority(200)
+    buttonGroup:Adopt(button:Address())
+
+    return button
+end
+
+local function createMenuBarButton()
+    local isTroy = cm:get_campaign_name() == "main_troy"
+
+    local button = isTroy and createTroyMenuBarButton() or createWarhammerMenuBarButton()
 
     local listeners = {
         ComponentLClickUp = "devtool_button_click_listener",
