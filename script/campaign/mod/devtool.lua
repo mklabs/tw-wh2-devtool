@@ -55,6 +55,8 @@ local function createWarhammerMenuBarButton()
 end
 
 local function createMenuBarButton()
+    debug("Create menu bar button")
+
     local isTroy = cm:get_campaign_name() == "main_troy"
 
     local button = isTroy and createTroyMenuBarButton() or createWarhammerMenuBarButton()
