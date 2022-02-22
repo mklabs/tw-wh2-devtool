@@ -22,7 +22,7 @@ local ComponentMixin = mixins.ComponentMixin
 local DevToolFrame = {
     frameName = "devtool_frame",
     troyTemplate = "ui/campaign ui/objectives_screen",
-    warhammerTemplate = "script/ui/devtool/campaign ui/technology_panel",
+    warhammerTemplate = "ui/campaign ui/technology_panel",
     component = nil,
     content = nil,
     miniUI = nil,
@@ -41,9 +41,7 @@ local DevToolFrame = {
 }
 
 function DevToolFrame:new()
-    debug("Create DevToolFrame")
     self.isTroy = cm:get_campaign_name() == "main_troy"
-
     self:createFrame()
     self:createComponents()
     self:registerCloseButton()
@@ -51,15 +49,11 @@ function DevToolFrame:new()
     self.consoleComponent = ConsoleComponent:new(self)
     self.miniUI = MiniDevToolFrame:new(self)
     self.helpTabComponent = HelpTabComponent:new(self)
-
     self.helpTabComponent:hideFrame()
     self.miniUI:hideFrame()
-
     self:welcomeMessage()
     self:registerListeners()
-    
     self.textTabButton:SetState("selected")
-
     core:trigger_event("devtool_open")
     return self
 end
@@ -192,6 +186,7 @@ function DevToolFrame:createFrame()
         removeComponent(find_uicomponent(self.component, "label_research_rate"))
         removeComponent(find_uicomponent(self.component, "panel_frame", "button_info_holder", "button_info"))
         removeComponent(find_uicomponent(self.component, "info_holder"))
+        removeComponent(find_uicomponent(self.component, "tech_search"))
         self.content = UIComponent(self.component:Find("parchment"))
     end
 end
@@ -214,7 +209,6 @@ function DevToolFrame:welcomeMessage()
 end
 
 function DevToolFrame:addMiniUIButton()
-
     if self.isTroy then
         local component = self.component
         local originalInfoBtn = _(component, "panel > panel_title > button_info")
@@ -240,9 +234,8 @@ function DevToolFrame:addMiniUIButton()
         return btn
     else
         local buttonName = self.frameName .. "_MiniUIButton"
-        self.component:CreateComponent(buttonName, "script/ui/devtool/templates/round_small_button")
+        local btn = UIComponent(self.component:CreateComponent(buttonName, "ui/templates/round_small_button"))
     
-        local btn = find_uicomponent(self.component, buttonName)
         btn:SetImagePath("script/campaign/resize_icon.png")
         btn:SetTooltipText("Switch to minimized UI", true)
     
@@ -280,7 +273,7 @@ function DevToolFrame:addOptionsButton()
         button:SetImagePath("ui/skins/default/icon_options.png")
     else
         local buttonName = self.frameName .. "_options_button"
-        self.component:CreateComponent(buttonName, "script/ui/devtool/templates/round_small_button")
+        self.component:CreateComponent(buttonName, "ui/templates/round_small_button")
         button = find_uicomponent(self.component, buttonName)
         button:SetImagePath("ui/skins/warhammer2/icon_options.png")
     end
