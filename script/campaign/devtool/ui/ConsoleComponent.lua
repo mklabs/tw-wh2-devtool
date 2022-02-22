@@ -211,25 +211,13 @@ function ConsoleComponent:createInputFileHint()
     local textboxWidth, textboxHeight = self.textbox:Bounds() 
     positionComponentRelativeTo(component, self.textbox, textboxWidth - textWidth, 35)
     component:SetStateText("[[col:help_page_link]]" .. text .. "[[/col]]")
-    component:SetTooltipText("Click to open the file in your text editor.\n\nThe content of the file will be executed on each save as if you were using the console textbox.", true)
+    component:SetTooltipText("Open the file data/text/console_input.lua in your text editor, edit the content and save.\n\nThe content of the file will be executed on each save as if you were using the console textbox.", true)
 
     local savedValue = cm:get_saved_value("devtool_options_fileWatch")
     -- compare against false to account for nil value when saved value has not been saved yet
     if savedValue == false then
         component:SetVisible(false)
     end
-
-    local listenerName = "devtool_open_inputfile_listener"
-    core:add_listener(
-        listenerName,
-        "ComponentLClickUp",
-        function(context) return component == UIComponent(context.component) end,    
-        function(context)
-            debug("Open input file in text editor", devtool.INPUT_FILEPATH)
-            os.execute("start " .. devtool.INPUT_FILEPATH)
-        end,
-        true
-    )
 
     core:remove_listener("devtool_options_fileWatch_changed_hint_listener")
     core:add_listener(

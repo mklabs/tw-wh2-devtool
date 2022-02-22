@@ -42,7 +42,7 @@ local function createWarhammerMenuBarButton()
 
     local name = "devtool_button"
     local buttonGroup = find_uicomponent(core:get_ui_root(), "menu_bar", "buttongroup")
-    buttonGroup:CreateComponent(name, "script/ui/devtool/templates/round_small_button")
+    buttonGroup:CreateComponent(name, "ui/templates/round_small_button")
 
     local button = find_uicomponent(buttonGroup, name)
     button:SetImagePath("ui/skins/default/icon_toggle_unit_details.png")
@@ -55,6 +55,8 @@ local function createWarhammerMenuBarButton()
 end
 
 local function createMenuBarButton()
+    debug("Create menu bar button")
+
     local isTroy = cm:get_campaign_name() == "main_troy"
 
     local button = isTroy and createTroyMenuBarButton() or createWarhammerMenuBarButton()
